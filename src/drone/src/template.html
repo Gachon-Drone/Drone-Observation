@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Drone Command Center</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        #sidebar { width: 300px; background: #2c3e50; color: white; display: flex; flex-direction: column; z-index: 2000; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sidebar-header { padding: 20px; background: #1a252f; text-align: center; font-weight: bold; font-size: 1.1em; }
+        .mission-list { flex: 1; overflow-y: auto; }
+        .mission-item { padding: 12px 15px; border-bottom: 1px solid #34495e; cursor: pointer; transition: 0.2s; }
+        .mission-item:hover { background: #34495e; }
+        .mission-item.active { background: #3498db; border-left: 4px solid #fff; font-weight: bold; }
+        #map-container { flex: 1; position: relative; }
+        #map { width: 100%; height: 100%; }
+        #controls { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 5px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; gap: 5px; }
+        .tab-btn { padding: 8px 25px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; background: transparent; color: #555; transition: 0.3s; }
+        .tab-btn.active { background: #2c3e50; color: white; }
+        #status-bar { position: absolute; top: 20px; right: 20px; z-index: 1000; background: rgba(255,255,255,0.95); padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        .status-live { color: #28a745; font-weight: bold; }
+        .status-paused { color: #dc3545; font-weight: bold; }
+        #dashboard { position: absolute; bottom: 25px; left: 25px; z-index: 1000; background: rgba(0,0,0,0.85); color: white; padding: 15px; border-radius: 10px; width: 320px; backdrop-filter: blur(5px); }
+        #dashboard h3 { margin: 0 0 10px 0; border-bottom: 1px solid #555; padding-bottom: 8px; display: flex; justify-content: space-between; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { padding: 6px 4px; border-bottom: 1px solid #444; }
+        .status-dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .dot-green { background: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
+        .dot-red { background: #e74c3c; box-shadow: 0 0 5px #e74c3c; }
+        .dot-gray { background: #7f8c8d; }
+        #mediaModal { display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
+        .modal-content-wrapper { position: relative; margin: 2% auto; width: 90%; max-width: 1200px; height: 90%; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .close-modal { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; }
+        #modalImg, #modalVideo { max-width: 100%; max-height: 85vh; border-radius: 5px; }
+        #modalImg { display: none; }
+        #modalVideo { display: none; }
+        .popup-content { width: 280px; }
+        .popup-header { font-weight: bold; color: #e74c3c; font-size: 15px; border-bottom: 2px solid #e74c3c; padding-bottom: 5px; text-align: center; margin-bottom: 8px; }
+        .popup-img-container { width: 100%; height: 140px; margin: 8px 0; border-radius: 4px; border: 1px solid #ddd; cursor: pointer; overflow: hidden; }
+        .popup-img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+        .popup-img:hover { transform: scale(1.05); }
+        .popup-section { margin-bottom: 10px; font-size: 12px; }
+        .popup-label { font-weight: bold; color: #555; }
+        .det-box { background: #fff3cd; padding: 8px; border-radius: 4px; border: 1px solid #ffc107; margin-top: 5px; }
+        .btn-group { display: flex; gap: 5px; margin-top: 8px; }
+        .btn-action { flex: 1; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .btn-dispatch { background: #e74c3c; }
+        .btn-dispatch:hover { background: #c0392b; }
+        .btn-enlarge { background: #34495e; }
+        .btn-play { background: #3498db; width: 100%; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div class="sidebar-header">📂 Mission History</div>
+        <div id="mission-list" class="mission-list"></div>
+    </div>
+    <div id="map-container">
+        <div id="controls">
+            <button class="tab-btn active" onclick="setMode('live')">📡 Live</button>
+            <button class="tab-btn" onclick="setMode('summary')">📊 Analysis</button>
+        </div>
+        <div id="status-bar">상태: <span id="status-text" class="status-live">실시간</span></div>
+        <div id="map"></div>
+        <div id="dashboard">
+            <h3>🚁 Fleet <span style="cursor:pointer; font-size:12px;" onclick="updateFleetStatus()">↻</span></h3>
+            <table id="drone-table"><tbody><tr><td colspan="4" style="text-align:center;">Loading...</td></tr></tbody></table>
+        </div>
+    </div>
+    <div id="mediaModal" onclick="if(event.target==this) closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <div class="modal-content-wrapper">
+            <div id="modalTitle" style="color:white; margin-bottom:10px;"></div>
+            <img id="modalImg"><video id="modalVideo" controls></video>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map', {maxZoom: 25}).setView([37.5665, 126.978], 19);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 25, maxNativeZoom: 19}).addTo(map);
+        var layerGroup = L.layerGroup().addTo(map);
+        var droneMarkers = {};
+        var currentMission = "", currentMode = "live", isPopupOpen = false, isFirstLoad = true;
+        var existingMarkers = {}; // 기존 마커 추적용
+        var pathPolyline = null; // 경로선 재사용
+        
+        map.on('popupopen', () => { isPopupOpen = true; document.getElementById('status-text').innerText = '일시정지'; });
+        map.on('popupclose', () => { isPopupOpen = false; document.getElementById('status-text').innerText = '실시간'; if(currentMode=='live') fetchData(); });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMissions();
+            setInterval(updateFleetStatus, 2000);
+            setInterval(loadMissions, 15000);
+            setInterval(() => { if(currentMode=='live' && currentMission && !isPopupOpen) fetchData(); }, 2000);
+        });
+        
+        async function loadMissions() {
+            try {
+                const res = await fetch('/api/missions');
+                const missions = await res.json();
+                const list = document.getElementById('mission-list');
+                if(!missions.length) { list.innerHTML = "<div style='padding:20px; text-align:center; color:#aaa;'>No missions</div>"; return; }
+                list.innerHTML = "";
+                missions.forEach((m, i) => {
+                    let div = document.createElement('div');
+                    div.className = "mission-item" + (m == currentMission ? " active" : "");
+                    div.innerText = "📁 " + m.replace("mission_", "");
+                    div.onclick = () => selectMission(m, div);
+                    list.appendChild(div);
+                    if(i == 0 && !currentMission) selectMission(m, div);
+                });
+            } catch(e) {}
+        }
+        
+        function selectMission(m, el) {
+            currentMission = m;
+            document.querySelectorAll('.mission-item').forEach(e => e.classList.remove('active'));
+            if(el) el.classList.add('active');
+            layerGroup.clearLayers();
+            existingMarkers = {}; // 마커 캐시 초기화
+            pathPolyline = null; // 경로선 초기화
+            isPopupOpen = false;
+            isFirstLoad = true;
+            fetchData();
+        }
+        
+        window.setMode = function(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            layerGroup.clearLayers();
+            existingMarkers = {}; // 모드 전환 시 캐시 초기화
+            pathPolyline = null;
+            isPopupOpen = false;
+            fetchData();
+        }
+        
+        async function fetchData() {
+            if(!currentMission || isPopupOpen) return;
+            
+            if(currentMode == 'live') {
+                try {
+                    const res = await fetch(`/api/data/${currentMission}`);
+                    const logs = await res.json();
+                    let path = [];
+                    let newMarkers = {}; // 새로운 마커 ID 추적
+                    
+                    logs.forEach((log, i) => {
+                        if(!log.gps || log.gps.lat == 0) return;
+                        let lat = log.gps.lat, lon = log.gps.lon;
+                        path.push([lat, lon]);
+                        let dets = log.detections || [];
+                        let hasDet = dets.length > 0;
+                        let time = new Date(log.timestamp * 1000).toLocaleString('ko-KR');
+                        let img = `/files/${currentMission}/${log.image_path}`;
+                        
+                        if(hasDet || i % 5 == 0) {
+                            let markerId = `marker_${log.timestamp}_${i}`; // 고유 ID
+                            let color = hasDet ? '#e74c3c' : '#3498db';
+                            let r = hasDet ? 7 : 4;
+                            
+                            // 기존 마커가 있으면 재사용
+                            if(existingMarkers[markerId]) {
+                                newMarkers[markerId] = existingMarkers[markerId];
+                                return; // 이미 그려진 마커는 스킵
+                            }
+                            
+                            let marker;
+                            if(hasDet) {
+                                let detInfo = dets.map(d => `• <b>${d.class_name||d.class_id||'Person'}</b> (${(d.score*100).toFixed(0)}%)`).join('<br>');
+                                let popup = `<div class="popup-content"><div class="popup-header">🚨 Detected</div>
+                                <div class="popup-img-container" onclick="openMedia('image','${img}','Detection')">
+                                <img src="${img}" class="popup-img"></div>
+                                <div class="popup-section"><span class="popup-label">⏱ 시간:</span> ${time}</div>
+                                <div class="popup-section"><span class="popup-label">📍 좌표:</span><br>${lat.toFixed(7)}, ${lon.toFixed(7)}</div>
+                                <div class="popup-section"><span class="popup-label">🎯 탐지:</span><div class="det-box">${detInfo}</div></div>
+                                <div class="btn-group">
+                                <button class="btn-action btn-enlarge" onclick="openMedia('image','${img}','Snapshot')">🔍 확대</button>
+                                <button class="btn-action btn-dispatch" onclick="requestDispatch(${lat},${lon})">🚁 파견</button>
+                                </div></div>`;
+                                marker = L.circleMarker([lat, lon], {radius:r, color:'white', weight:2, fillColor:color, fillOpacity:1}).bindPopup(popup, {maxWidth:300});
+                            } else {
+                                marker = L.circleMarker([lat, lon], {radius:r, color:'white', weight:1.5, fillColor:color, fillOpacity:0.6}).bindPopup(`<b>📍 Point</b><br>${time}`);
+                            }
+                            
+                            marker.addTo(layerGroup);
+                            newMarkers[markerId] = marker;
+                        }
+                    });
+                    
+                    // 경로선 업데이트 (기존 것 제거 후 새로 그리기)
+                    if(path.length) {
+                        if(pathPolyline) layerGroup.removeLayer(pathPolyline);
+                        pathPolyline = L.polyline(path, {color:'#3498db', weight:3, opacity:0.6}).addTo(layerGroup);
+                        if(isFirstLoad) { map.panTo(path[path.length-1]); isFirstLoad=false; }
+                    }
+                    
+                    // 기존 마커 중 더 이상 없는 것만 제거 (거의 없음)
+                    for(let id in existingMarkers) {
+                        if(!newMarkers[id]) {
+                            layerGroup.removeLayer(existingMarkers[id]);
+                        }
+                    }
+                    existingMarkers = newMarkers;
+                    
+                } catch(e) {}
+            } else {
+                // Summary 모드는 기존 방식 유지 (한 번만 로드되므로 깜빡임 없음)
+                layerGroup.clearLayers();
+                existingMarkers = {};
+                pathPolyline = null;
+                
+                try {
+                    const res = await fetch(`/api/summary/${currentMission}`);
+                    const data = await res.json();
+                    if(data.error) return;
+                    
+                    data.forEach(evt => {
+                        let icon = L.divIcon({html:"<div style='background:#e67e22; width:24px; height:24px; border-radius:50%; border:3px solid white; box-shadow:0 0 8px rgba(0,0,0,0.5);'></div>", iconSize:[30,30], iconAnchor:[15,15]});
+                        let popup = `<div style="width:260px;"><h3 style="color:#e67e22; margin:5px 0;">📊 Event #${evt.cluster_id}</h3>
+                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>프레임:</b> ${evt.count}</div>
+                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>시작:</b> ${new Date(evt.start_time*1000).toLocaleString('ko-KR')}</div>
+                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>좌표:</b> ${evt.center_gps.lat.toFixed(6)}, ${evt.center_gps.lon.toFixed(6)}</div>
+                        <button class="btn-action btn-play" onclick="openMedia('video','/files/${currentMission}/${evt.video_path}','Event #${evt.cluster_id}')">🎥 재생</button></div>`;
+                        L.marker([evt.center_gps.lat, evt.center_gps.lon], {icon:icon}).addTo(layerGroup).bindPopup(popup);
+                    });
+                } catch(e) {}
+            }
+        }
+        
+        async function updateFleetStatus() {
+            try {
+                const res = await fetch('/api/fleet_status');
+                const drones = await res.json();
+                const tb = document.querySelector("#drone-table tbody");
+                if(!drones.length) { tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>연결 없음</td></tr>"; return; }
+                tb.innerHTML = "";
+                drones.forEach(d => {
+                    let cls = "dot-gray", txt = "Offline";
+                    if(d.connected) { cls = d.is_busy ? "dot-red" : "dot-green"; txt = d.is_busy ? "Busy" : "Ready"; }
+                    tb.innerHTML += `<tr><td><b>${d.id}</b></td><td>${d.mode}</td><td>${d.battery}V</td><td><span class="status-dot ${cls}"></span>${txt}</td></tr>`;
+                    if(d.location && d.location.lat) {
+                        if(droneMarkers[d.id]) droneMarkers[d.id].setLatLng([d.location.lat, d.location.lon]);
+                        else {
+                            let icon = L.divIcon({html:`<div style='background:#3498db; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 0 6px #000;'></div>`, iconSize:[18,18], iconAnchor:[9,9]});
+                            droneMarkers[d.id] = L.marker([d.location.lat, d.location.lon], {icon:icon}).addTo(map).bindPopup(`<b>🚁 ${d.id}</b><br>Bat: ${d.battery}V`);
+                        }
+                    }
+                });
+            } catch(e) {}
+        }
+        
+        window.requestDispatch = async function(lat, lon) {
+            if(!confirm(`좌표 [${lat.toFixed(5)}, ${lon.toFixed(5)}]로 드론 파견?`)) return;
+            try {
+                const res = await fetch('/api/dispatch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lat,lon})});
+                const r = await res.json();
+                alert(r.message);
+            } catch(e) { alert("통신 오류"); }
+        }
+        
+        window.openMedia = function(type, src, title) {
+            const modal = document.getElementById('mediaModal');
+            const img = document.getElementById('modalImg');
+            const vid = document.getElementById('modalVideo');
+            document.getElementById('modalTitle').innerText = title || "";
+            modal.style.display = "flex";
+            if(type == 'image') { img.style.display="block"; vid.style.display="none"; img.src=src; vid.pause(); }
+            else { img.style.display="none"; vid.style.display="block"; vid.src=src; vid.play(); }
+        }
+        
+        window.closeModal = function() {
+            const modal = document.getElementById('mediaModal');
+            const vid = document.getElementById('modalVideo');
+            modal.style.display = "none";
+            vid.pause();
+            vid.src = "";
+        }
+    </script>
+</body>
+</html>

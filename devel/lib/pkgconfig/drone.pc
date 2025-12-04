@@ -1,0 +1,8 @@
+prefix=/home/main/Desktop/catkin_git/devel
+
+Name: drone
+Description: Description of drone
+Version: 1.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

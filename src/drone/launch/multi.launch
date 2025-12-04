@@ -1,0 +1,39 @@
+<launch>
+
+    <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${time}] [${node}]: ${message}" />
+
+
+
+    <param name="BASE_DIR" value="~/mission_data" />
+    <param name="IMAGE_TOPIC" value="/airsim_node/Observe/down_camera/Scene" />
+    <param name="GPS_TOPIC" value="/airsim_node/Observe/gps/Gps" />
+    <param name="STATE_TOPIC" value="/observe/mavros/state" />
+    <param name="BBOX_TOPIC" value="/yolo/detections" />
+    <param name="VIS_TOPIC" value="/yolo/vis_image" />
+
+    <param name="MODEL_NAME" value="yolov8x-worldv2.pt" />
+    <rosparam param="CUSTOM_CLASSES">["person", "human", "pedestrian", "soldier"]</rosparam>
+
+    <param name="CONF_THRESHOLD" value="0.2" />
+    <param name="MAX_BBOX_RATIO" value="0.05" />
+
+    <node pkg="drone" type="node_yolo.py"     name="node_yolo"     output="screen"/>
+
+
+
+    <param name="MIN_SAMPLES" value="5" />
+    <param name="EPS_METERS" value="5.0" />
+    <node pkg="drone" type="node_analyze.py"      name="node_anlyze"      output="screen"/>
+
+
+
+
+
+    <node pkg="drone" type="node_server.py"   name="node_server"   output="screen"/>
+
+
+
+    <rosparam param="DRONE_IDS">["drone1", "drone2"]</rosparam>
+    <node pkg="drone" type="node_manager.py"  name="node_manager"  output="screen"/>
+
+</launch>

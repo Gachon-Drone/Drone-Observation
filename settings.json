@@ -1,0 +1,146 @@
+{
+  "SettingsVersion": 1.2,
+  "SimMode": "Multirotor",
+  "ClockType": "SteppableClock",
+  "EnableGPS": true,
+
+  "Vehicles": {
+  "Drone1": {
+      "VehicleType": "PX4Multirotor",
+      "UseSerial": false,
+      "UseTcp": true,
+      "TcpPort": 4561,
+      "LockStep": false,
+      "EnableGPS": true,
+      
+      "ControlPortLocal": 14548,
+          "ControlPortRemote": 14588,
+          "ControlIp": "127.0.0.1",
+    	  "LocalHostIp": "127.0.0.1",
+    	  "UdpIp": "127.0.0.1",
+    	  
+      
+      "Parameters": {
+        "NAV_RCL_ACT": 0,
+        "NAV_DLL_ACT": 0,
+        "COM_OBJ_ACT": 1,
+        "LPE_LAT": 47.641468,
+        "LPE_LON": -122.140165
+      },
+      
+      "Sensors": {
+        "Imu": { "SensorType": 2, "Enabled": true },
+        "Gps": { "SensorType": 3, "Enabled": true, "UpdateFrequency": 50 }
+      },
+      "Cameras": {
+        "front_camera": {
+          "CaptureSettings": [
+            { "PublishToRos": 1, "ImageType": 0, "Width": 640, "Height": 480, "FOV_Degrees": 90 }
+          ],
+          "X": 0.50, "Y": 0, "Z": 0.10, "Pitch": 0, "Roll": 0, "Yaw": 0
+        },
+        "down_camera": {
+          "CaptureSettings": [
+            { "PublishToRos": 1, "ImageType": 0, "Width": 640, "Height": 480, "FOV_Degrees": 90 }
+          ],
+          "X": 0.50, "Y": 0, "Z": 0.10, "Pitch": -90, "Roll": 0, "Yaw": 0
+        }
+      },
+      "X": 0, "Y": 0, "Z": 0
+    },
+    
+    
+    
+    
+    "Observe": {
+      "VehicleType": "PX4Multirotor",
+      "UseSerial": false,
+      "UseTcp": true,
+      "TcpPort": 4560,
+      "LockStep": false,
+      "EnableGPS": true,
+
+	"ControlPortLocal": 14549,
+          "ControlPortRemote": 14589,
+          "ControlIp": "127.0.0.1",
+    	  "LocalHostIp": "127.0.0.1",
+    	  "UdpIp": "127.0.0.1",
+    	  
+      "Parameters": {
+        "NAV_RCL_ACT": 0,
+        "NAV_DLL_ACT": 0,
+        "COM_OBJ_ACT": 1,
+        "LPE_LAT": 47.641468,
+        "LPE_LON": -122.140165
+      },
+
+      "Sensors": {
+        "Imu": {
+          "SensorType": 2,
+          "Enabled": true
+        },
+        "Gps": {
+          "SensorType": 3,
+          "Enabled": true,
+          "EphTimeConstant": 0.9,
+          "EpvTimeConstant": 0.9,
+          "EphInitial": 25,
+          "EpvInitial": 25,
+          "EphFinal": 0.1,
+          "EpvFinal": 0.1,
+          "EphMin3d": 3,
+          "EphMin2d": 4,
+          "UpdateLatency": 0.2,
+          "UpdateFrequency": 50,
+          "StartupDelay": 1
+        }
+      },
+
+      "Cameras": {
+        "front_camera": {
+          "CaptureSettings": [
+            {
+              "PublishToRos": 1,
+              "ImageType": 0,
+              "Width": 1920,
+              "Height": 1080,
+              "FOV_Degrees": 90,
+              "TargetGamma": 1.5
+            }
+          ],
+          "X": 0.50, "Y": 0, "Z": 0.10,
+          "Pitch": 0, "Roll": 0, "Yaw": 0
+        },
+
+        "down_camera": {
+          "CaptureSettings": [
+            {
+              "PublishToRos": 1,
+              "ImageType": 0,
+              "Width": 1920,
+              "Height": 1080,
+              "FOV_Degrees": 90,
+              "TargetGamma": 1.5
+            }
+          ],
+          "X": 0.50, "Y": 0, "Z": 0.10,
+          "Pitch": -90, "Roll": 0, "Yaw": 0
+        }
+      },
+
+      "X": 2,
+      "Y": 0,
+      "Z": 0,
+      "Pitch": 0,
+      "Roll": 0,
+      "Yaw": 0
+    }
+  },
+
+  "SubWindows": [
+    { "WindowID": 0, "VehicleName": "Observe", "ImageType": 0, "CameraName": "front_camera", "Visible": true },
+    { "WindowID": 1, "VehicleName": "Observe", "ImageType": 0, "CameraName": "down_camera", "Visible": true },
+    { "WindowID": 2, "VehicleName": "Drone1", "ImageType": 0, "CameraName": "down_camera", "Visible": true }
+  ]
+}
+

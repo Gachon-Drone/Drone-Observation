@@ -1,0 +1,2 @@
+drone
+-DCATKIN_DEVEL_PREFIX=/home/main/Desktop/catkin_git/devel -DCMAKE_INSTALL_PREFIX=/home/main/Desktop/catkin_git/install -G Unix Makefiles
