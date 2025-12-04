@@ -61,7 +61,7 @@
             <button class="tab-btn active" onclick="setMode('live')">📡 Live</button>
             <button class="tab-btn" onclick="setMode('summary')">📊 Analysis</button>
         </div>
-        <div id="status-bar">상태: <span id="status-text" class="status-live">실시간</span></div>
+        <div id="status-bar">State: <span id="status-text" class="status-live">Real-Time</span></div>
         <div id="map"></div>
         <div id="dashboard">
             <h3>🚁 Fleet <span style="cursor:pointer; font-size:12px;" onclick="updateFleetStatus()">↻</span></h3>
@@ -85,8 +85,8 @@
         var existingMarkers = {}; // 기존 마커 추적용
         var pathPolyline = null; // 경로선 재사용
         
-        map.on('popupopen', () => { isPopupOpen = true; document.getElementById('status-text').innerText = '일시정지'; });
-        map.on('popupclose', () => { isPopupOpen = false; document.getElementById('status-text').innerText = '실시간'; if(currentMode=='live') fetchData(); });
+        map.on('popupopen', () => { isPopupOpen = true; document.getElementById('status-text').innerText = 'Pause'; });
+        map.on('popupclose', () => { isPopupOpen = false; document.getElementById('status-text').innerText = 'Real-Time'; if(currentMode=='live') fetchData(); });
         
         document.addEventListener('DOMContentLoaded', () => {
             loadMissions();
@@ -172,12 +172,12 @@
                                 let popup = `<div class="popup-content"><div class="popup-header">🚨 Detected</div>
                                 <div class="popup-img-container" onclick="openMedia('image','${img}','Detection')">
                                 <img src="${img}" class="popup-img"></div>
-                                <div class="popup-section"><span class="popup-label">⏱ 시간:</span> ${time}</div>
-                                <div class="popup-section"><span class="popup-label">📍 좌표:</span><br>${lat.toFixed(7)}, ${lon.toFixed(7)}</div>
-                                <div class="popup-section"><span class="popup-label">🎯 탐지:</span><div class="det-box">${detInfo}</div></div>
+                                <div class="popup-section"><span class="popup-label">⏱ Time:</span> ${time}</div>
+                                <div class="popup-section"><span class="popup-label">📍 Coordinate:</span><br>${lat.toFixed(7)}, ${lon.toFixed(7)}</div>
+                                <div class="popup-section"><span class="popup-label">🎯 Detection:</span><div class="det-box">${detInfo}</div></div>
                                 <div class="btn-group">
-                                <button class="btn-action btn-enlarge" onclick="openMedia('image','${img}','Snapshot')">🔍 확대</button>
-                                <button class="btn-action btn-dispatch" onclick="requestDispatch(${lat},${lon})">🚁 파견</button>
+                                <button class="btn-action btn-enlarge" onclick="openMedia('image','${img}','Snapshot')">🔍 Zoom</button>
+                                <button class="btn-action btn-dispatch" onclick="requestDispatch(${lat},${lon})">🚁 Detachment</button>
                                 </div></div>`;
                                 marker = L.circleMarker([lat, lon], {radius:r, color:'white', weight:2, fillColor:color, fillOpacity:1}).bindPopup(popup, {maxWidth:300});
                             } else {
@@ -219,10 +219,10 @@
                     data.forEach(evt => {
                         let icon = L.divIcon({html:"<div style='background:#e67e22; width:24px; height:24px; border-radius:50%; border:3px solid white; box-shadow:0 0 8px rgba(0,0,0,0.5);'></div>", iconSize:[30,30], iconAnchor:[15,15]});
                         let popup = `<div style="width:260px;"><h3 style="color:#e67e22; margin:5px 0;">📊 Event #${evt.cluster_id}</h3>
-                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>프레임:</b> ${evt.count}</div>
-                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>시작:</b> ${new Date(evt.start_time*1000).toLocaleString('ko-KR')}</div>
-                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>좌표:</b> ${evt.center_gps.lat.toFixed(6)}, ${evt.center_gps.lon.toFixed(6)}</div>
-                        <button class="btn-action btn-play" onclick="openMedia('video','/files/${currentMission}/${evt.video_path}','Event #${evt.cluster_id}')">🎥 재생</button></div>`;
+                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>Frame:</b> ${evt.count}</div>
+                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>Start:</b> ${new Date(evt.start_time*1000).toLocaleString('ko-KR')}</div>
+                        <div style="padding:3px 0; border-bottom:1px solid #eee;"><b>Coordinate:</b> ${evt.center_gps.lat.toFixed(6)}, ${evt.center_gps.lon.toFixed(6)}</div>
+                        <button class="btn-action btn-play" onclick="openMedia('video','/files/${currentMission}/${evt.video_path}','Event #${evt.cluster_id}')">🎥 Play</button></div>`;
                         L.marker([evt.center_gps.lat, evt.center_gps.lon], {icon:icon}).addTo(layerGroup).bindPopup(popup);
                     });
                 } catch(e) {}
@@ -234,7 +234,7 @@
                 const res = await fetch('/api/fleet_status');
                 const drones = await res.json();
                 const tb = document.querySelector("#drone-table tbody");
-                if(!drones.length) { tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>연결 없음</td></tr>"; return; }
+                if(!drones.length) { tb.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Disconnected</td></tr>"; return; }
                 tb.innerHTML = "";
                 drones.forEach(d => {
                     let cls = "dot-gray", txt = "Offline";
@@ -252,12 +252,12 @@
         }
         
         window.requestDispatch = async function(lat, lon) {
-            if(!confirm(`좌표 [${lat.toFixed(5)}, ${lon.toFixed(5)}]로 드론 파견?`)) return;
+            if(!confirm(`Are you sure that anydrone goes to [${lat.toFixed(5)}, ${lon.toFixed(5)}]?`)) return;
             try {
                 const res = await fetch('/api/dispatch', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lat,lon})});
                 const r = await res.json();
                 alert(r.message);
-            } catch(e) { alert("통신 오류"); }
+            } catch(e) { alert("Communication Error"); }
         }
         
         window.openMedia = function(type, src, title) {
